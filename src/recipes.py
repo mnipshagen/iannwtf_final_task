@@ -33,7 +33,7 @@ class Recipes:
         }
       ], allowDiskUse=True)
 
-    self._ing2id = {item['name']: item['_id'] for item in agg}
+    self._ing2id = {item['name']: int(item['_id']) for item in agg}
     self._ing2id['NO_INGREDIENT'] = 0
     self._id2ing = dict(zip(self._ing2id.values(), self._ing2id.keys()))
     self._word2id = {}
