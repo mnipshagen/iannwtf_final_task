@@ -1,0 +1,10 @@
+{
+    "storage" : {
+        "folder"    : "storage/",
+        "id_file"   : "recipes.csv",
+        "json_file" : "recipes.json",
+        "puretext"  : "all_words.txt",
+        "database"  : "iannwtf",
+        "collection": "recipes"
+    }
+}
