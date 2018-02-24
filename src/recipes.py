@@ -42,33 +42,38 @@ class Recipes:
     self._id2unit = {}
 
   def ings2ids(self, ings):
-    return self._2(ings, self._ing2id)
+    return self._2(ings, self._ing2id, 0)
   
   def units2ids(self, units):
-    return self._2(units, self._unit2id)
+    return self._2(units, self._unit2id, 0)
 
   def words2ids(self, words):
-    return self._2(words, self._word2id)
+    return self._2(words, self._word2id, 0)
 
   def ids2ings(self, ids):
-    return self._2(ids, self._id2ing)
+    return self._2(ids, self._id2ing, "NO_INGREDIENT")
   
   def ids2units(self, ids):
-    return self._2(ids, self._id2unit)
+    return self._2(ids, self._id2unit, "NO_UNIT")
 
   def ids2words(self, ids):
-    return self._2(ids, self._id2word)
+    return self._2(ids, self._id2word, "UNKNOWN")
 
-  def _2(self, names, d):
-    if type(names) in [list, range, np.ndarray]:
-      return [d.get(n, 0) for n in names]
+  def _2(self, names, d, undef):
+    if type(names) in [list, range]:
+      return [d.get(n, undef) for n in names]
+    elif type(names) == np.ndarray:
+      res = np.full_like(names, "", dtype=object)
+      for i in range(res.shape[0]):
+        res[i] = self._2(names[i], d, undef)
+      return res
     else:
-      return d.get(names, 0)
+      return d.get(names, undef)
 
   def get_ingredient_batch(self, batchsize=25, max_ingredients=15):
     count = 0
     batch = np.zeros((batchsize, max_ingredients), dtype=np.float32)
-    for doc in self.coll.sample({},
+    for doc in self.coll.find({},
                               {"ingredients.foodId":1, "_id":0},
                               no_cursor_timeout=True
                               ):
