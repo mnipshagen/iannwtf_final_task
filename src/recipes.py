@@ -21,7 +21,7 @@ class Recipes:
     self.db = client['iannwtf']
     self.coll = self.db[RECIPE_COLLECTION]
 
-  def create_dictionaries(self):
+  def create_dictionaries(self,vocabulary_size=20000):
     agg = self.coll.aggregate([
         {"$project": {"_id": 0, "ingredients.foodId": 1, "ingredients.name": 1}},
         {"$unwind": "$ingredients"},
@@ -40,6 +40,11 @@ class Recipes:
     self._id2word = {} 
     self._unit2id = {}
     self._id2unit = {}
+
+    ingredient_size = len(self._ing2id)
+    unit_size = len(self._unit2id)
+
+    return ingredient_size, unit_size, vocabulary_size
 
   def ings2ids(self, ings):
     return self._2(ings, self._ing2id, 0)

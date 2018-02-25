@@ -6,5 +6,19 @@
         "puretext"  : "all_words.txt",
         "database"  : "iannwtf",
         "collection": "recipes"
+    },
+    "network": {
+        "hyperparameters": {
+            "embedding_size": 64,
+            "lstm_memoery_size": 64,
+            "dropout_rate": 0.85,
+            "z_size": 50,
+            "max_ingredients": 15
+        },
+        "directories": {
+            "embedding_weights": "embedding_weights/",
+            "weight_dir": "weights/",
+            "summary_dir": "summary"
+        }
     }
 }
