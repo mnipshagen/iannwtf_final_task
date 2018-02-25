@@ -10,7 +10,7 @@
     "network": {
         "hyperparameters": {
             "embedding_size": 64,
-            "lstm_memoery_size": 64,
+            "lstm_memory_size": 64,
             "dropout_rate": 0.85,
             "z_size": 50,
             "max_ingredients": 15
