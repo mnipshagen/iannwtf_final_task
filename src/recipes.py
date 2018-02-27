@@ -34,15 +34,6 @@ class Recipes:
       ], allowDiskUse=True)
     
     self._ing2id = {item['name'].lower(): int(item['_id']) for item in agg}
-    ids = list(self._ing2id.values())
-    ids.sort()
-    self._ing2id['NO_INGREDIENT'] = 0
-    self._ing_id2nid = {}
-    for i in range(len(ids)):
-      nid = i+1
-      self._ing_id2nid[ids[i]] = nid
-    self._ing_id2nid[0] = 0
-    self._ing_nid2id = dict(zip(self._ing_id2nid.values(), self._ing_id2nid.keys()))
     self._id2ing = dict(zip(self._ing2id.values(), self._ing2id.keys()))
 
     self._word2id = {}
@@ -56,8 +47,7 @@ class Recipes:
     return ingredient_size, unit_size, vocabulary_size
 
   def ings2ids(self, ings):
-    tmp =  self._2(ings, self._ing2id, 0)
-    return self._2(tmp, self._ing_id2nid, 0)
+    return self._2(ings, self._ing2id, 0)
   
   def units2ids(self, units):
     return self._2(units, self._unit2id, 0)
@@ -66,8 +56,7 @@ class Recipes:
     return self._2(words, self._word2id, 0)
 
   def ids2ings(self, ids):
-    tmp = self._2(ids, self._ing_nid2id, 0)
-    return self._2(tmp, self._id2ing, "NO_INGREDIENT")
+    return self._2(ids, self._id2ing, "NO_INGREDIENT")
   
   def ids2units(self, ids):
     return self._2(ids, self._id2unit, "NO_UNIT")
@@ -89,10 +78,12 @@ class Recipes:
   def get_ingredient_batch(self, batchsize=25, max_ingredients=15):
     count = 0
     batch = np.zeros((batchsize, max_ingredients), dtype=np.float32)
-    for doc in self.coll.find({},
-                              {"ingredients.foodId":1, "_id":0},
-                              no_cursor_timeout=True
-                              ):
+    cursor = self.coll.find({}, {"ingredients.foodId": 1, "_id": 0}, no_cursor_timeout = True)
+
+    recipes = np.array(list(cursor))
+    recipes.shuffle()
+
+    for doc in recipes:
       _ids = [int(x['foodId']) for x in doc['ingredients']]
       if len(_ids) > max_ingredients:
           _ids = _ids[:max_ingredients]
