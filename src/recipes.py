@@ -32,10 +32,19 @@ class Recipes:
             }
         }
       ], allowDiskUse=True)
-
-    self._ing2id = {item['name']: int(item['_id']) for item in agg}
+    
+    self._ing2id = {item['name'].lower(): int(item['_id']) for item in agg}
+    ids = list(self._ing2id.values())
+    ids.sort()
     self._ing2id['NO_INGREDIENT'] = 0
+    self._ing_id2nid = {}
+    for i in range(len(ids)):
+      nid = i+1
+      self._ing_id2nid[ids[i]] = nid
+    self._ing_id2nid[0] = 0
+    self._ing_nid2id = dict(zip(self._ing_id2nid.values(), self._ing_id2nid.keys()))
     self._id2ing = dict(zip(self._ing2id.values(), self._ing2id.keys()))
+
     self._word2id = {}
     self._id2word = {} 
     self._unit2id = {}
@@ -47,7 +56,8 @@ class Recipes:
     return ingredient_size, unit_size, vocabulary_size
 
   def ings2ids(self, ings):
-    return self._2(ings, self._ing2id, 0)
+    tmp =  self._2(ings, self._ing2id, 0)
+    return self._2(tmp, self._ing_id2nid, 0)
   
   def units2ids(self, units):
     return self._2(units, self._unit2id, 0)
@@ -56,7 +66,8 @@ class Recipes:
     return self._2(words, self._word2id, 0)
 
   def ids2ings(self, ids):
-    return self._2(ids, self._id2ing, "NO_INGREDIENT")
+    tmp = self._2(ids, self._ing_nid2id, 0)
+    return self._2(tmp, self._id2ing, "NO_INGREDIENT")
   
   def ids2units(self, ids):
     return self._2(ids, self._id2unit, "NO_UNIT")
