@@ -18,7 +18,7 @@
         "directories": {
             "embedding_weights": "embedding_weights/",
             "weight_dir": "weights/",
-            "summary_dir": "summary"
+            "summary_dir": "summary/"
         }
     }
 }
