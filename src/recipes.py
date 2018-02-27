@@ -85,7 +85,7 @@ class Recipes:
     cursor = self.coll.find({}, {"ingredients.foodId": 1, "_id": 0}, no_cursor_timeout = True)
 
     recipes = np.array(list(cursor))
-    recipes.shuffle()
+    np.shuffle(recipes)
 
     for doc in recipes:
       _ids = [int(x['foodId']) for x in doc['ingredients']]
