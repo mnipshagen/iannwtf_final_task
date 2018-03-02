@@ -1,6 +1,6 @@
 {
     "storage" : {
-        "folder"    : "storage/",
+        "folder"    : "database/",
         "id_file"   : "recipes.csv",
         "json_file" : "recipes.json",
         "puretext"  : "all_words.txt",
@@ -15,9 +15,9 @@
             "max_ingredients": 10
         },
         "directories": {
-            "embedding_weights": "embedding_weights/",
-            "weight_dir": "weights/",
-            "summary_dir": "summary/"
+            "embedding_weights": "train_data/embedding_weights/",
+            "weight_dir": "train_data/weights/",
+            "summary_dir": "train_data/summary/"
         }
     }
 }

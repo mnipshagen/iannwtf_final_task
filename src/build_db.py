@@ -47,7 +47,13 @@ fields = [
 ]
 
 # %% Define everything. Run is the entry point.
-def run():
+def run(config      = "config.json",
+        threads     = 16,
+        min_stars   = 0,
+        min_ratings = 0,
+        renew       = True,
+        categories  = range(1,200)
+        ):
     """
     This is the entrypoint for the crawler to run. It aint pretty but it works.
     It makes the variables threads, min_stars and min_ratings globally available,
@@ -61,9 +67,6 @@ def run():
             - somewhat done using partial?
         Make args set-able by cmd parameters
     """
-
-    config = "config.json"
-
     with open(config) as conf:
         data = json_util.loads(conf)
         storage = data['storage']
@@ -75,14 +78,6 @@ def run():
     if not os.path.isdir(CRAWL_FOLDER):
         logging.info("Found no storage folder in working directory, creating one.")
         os.makedirs(CRAWL_FOLDER)
-
-    threads = 16
-    min_stars = 0 #3.5
-    min_ratings = 0 #5
-    renew = True
-
-    # all the categories we want to search in
-    categories = range(1,200)
 
     # get all recipes! Wohoo! GONNA CATCH 'EM ALL
     logging.info("Here we go. Collecting Recipes...")
@@ -150,9 +145,12 @@ def run():
 
 def collect(categories, writeQueue, min_stars, min_ratings, threads):
     """
-    Collects recipe ids from the url given above and for all categories in the list.
+    Collects recipe ids from the url given above and for all categories in the list, and returns a list of ids.
+
     Only recipes with a rating better than min_stars and more ratings than min_ratings are considered.
-    The collection is multi threaded.
+    The collection is multi threaded, and will use the amount of threads given by `threads`.
+    To ensure a hickup-less, and fail-save writing process the id's are given to a queue, which will write
+    all ids into a csv file even in case of exceptions.
 
     Params:
     -------
@@ -208,7 +206,26 @@ def collect(categories, writeQueue, min_stars, min_ratings, threads):
 
 def fill(recipes, collection, queue, threads):
     """
+    Collects the json files for each id and writes them into the database.
 
+    It iterates over the ids in recipes and pushes them into `collection`, while
+    also adding it to queue to write them to a file.
+
+    Params:
+    -------
+    recipes: list
+        the list holding the recipe ids to fetch
+    collection: mongoDB collection
+        A collection object in which the recipes should be pushed
+    queue: Synced Queue
+        The queue to push the json objects in to save to file
+    threads: int
+        How many threads to use concurrent
+
+    Returns:
+    --------
+    recipe_objects: list
+        a list of json objects. Returned for convenience
     """
 
     pool = ThreadPool(threads)
@@ -229,6 +246,27 @@ def fill(recipes, collection, queue, threads):
     return recipe_obj
 
 def collect_recipe_ids(category, writeQueue, min_stars, min_ratings):
+    """
+    Crawls the url above for recipe ids and returns them as a list.
+
+    It also adds them to `writeQueue` to be written into a file as a safety measure.
+
+    Params:
+    -------
+    category: int
+        the category id to crawl for recipes
+    writeQueue: synced queue
+        the queue to store the ids into as strings
+    min_stars: float
+        Only recipes with at least this rating are considered
+    min_ratings: int
+        Only recipes with at least this many ratings are considered
+
+    Returns:
+    --------
+    recipe_ids: list
+        a list holding all recipe ids
+    """
     # global url_base, min_ratings, min_stars, debug
 
     logging.debug(">> Collecting id's of category {}.".format(category))
@@ -236,11 +274,14 @@ def collect_recipe_ids(category, writeQueue, min_stars, min_ratings):
     recipe_ids = []
     stop = False
     reason = ""
-    page_nr = 0  # increase by 30 each step
+    page_nr = 0  # increased by 30 each step
     total_recipes = 0
 
+    # as long as there is there are recipes to crawl we continue on
     while(not stop):
         stop = True
+        # try to connect to the url ten times. in the worst case this takes 30 seconds.abs
+        # but it helps with gateway errors and other temporary connection problems
         for attempt in range(10):
             try:
                 url = url_base.format(page_nr, category)
@@ -263,57 +304,69 @@ def collect_recipe_ids(category, writeQueue, min_stars, min_ratings):
         if stop:
             break
 
+        # if the page was not properly loaded for whatever reason, go to the next
+        # This should technically not happen, but it occured exactly once?
         if (not page):
+            page_nr += 30
             continue
+
+        # if there is no recipe segment in the html page, continue to the next one
         tree = BeautifulSoup(page, 'html.parser')
         recipes = tree.find_all("li", id=re_recipes, class_="search-list-item")
         if not recipes:
+            page_nr += 30
             continue
         total_recipes += len(recipes)
 
+
         for recipe in recipes:
             match = re_get_rating.findall(str(recipe))
-            if not match:
+            if not match: # regex to no result. weird, but move on
                 logging.warning("No rating in recipe: ", str(recipe))
                 continue
             try:
                 ratings = match[0]
                 no_of_ratings = ratings[0]
                 rating = ratings[1]
-            except KeyError:
+            except KeyError: # This should literally never be happening, but it did. Why?
                 logging.error("Wasn't able to extract rating")
                 continue
 
             try:
                 ratingf = float(rating)
-            except ValueError:
+            except ValueError: # Ratings are floats. They should be. Always.
                 logging.error("Could not convert rating %s to float" %rating)
                 continue
 
-            if ratingf < min_stars:
+            if ratingf < min_stars: # Since recipes are ordered by rating by default we can stop here
                 stop = True
                 reason = "Recipe found below star value."
                 break
 
             try:
                 no_of_ratingsi = int(no_of_ratings)
-            except ValueError:
+            except ValueError: # This has no reason to fail. But hey.
                 logging.error("Could not convert number of ratings %s into int." %no_of_ratings)
+                continue
             
-            if no_of_ratingsi >= min_ratings:
+            if no_of_ratingsi >= min_ratings: # only add recipe if it has enough ratings.
                 _id = re_get_id.findall(recipe['id'])
                 recipe_ids.append(_id[0])
 
         page_nr += 30
 
-    logging.debug(">> Collected {} of {} recipes from category {}. Last rating was {}.".format(len(recipe_ids), total_recipes, category, rating))
+    logging.debug(">> Collected {} of {} recipes from category {}. Last rating was {} and reason for stopping was {}.".format(len(recipe_ids), total_recipes, category, rating, reason))
 
+    # add the recipes to the queue as a list seperated by commas.
     s = str(category) + ",".join([str(r) for r in recipe_ids]) + "\n"
     writeQueue.put(s)
         
     return recipe_ids
 
 def collect_recipes(recipe):
+    """
+    Collects the json data from the ip for the given recipe and returns it.
+    """
     def flatten_ingredients(ingredientgroups):
         tmp = [ing for group in ingredientgroups for ing in group['ingredients']]
         res = []
@@ -373,4 +426,30 @@ def collect_recipes(recipe):
 
 #%%
 if __name__ == '__main__':
-    run()
+    """If started from the command line, offer commandline options to run it for convenience."""
+    import argparse
+    parser = argparse.ArgumentParser(description="Crawling the chefkoch api for recipes. It's fun!")
+    parser.add_argument('--config', '--cfg', '-C', default="config.json", type=str, dest='config', help="the json config file to load the values for the database from. Defaults to 'config.json'.")
+    parser.add_argument('--threads', '--cores', '-T', default=16, type=int, dest='threads', help="How many threads to use for the multi threaded parts. Defaults to 4")
+    parser.add_argument('--min_stars', '--stars', '-S', default=0, type=float, dest='min_stars', help="Only collect recipes that have at least this good a rating. Defaults to 0.")
+    parser.add_argument('--min_ratings', '--ratings', '-R', default=0, type=int, dest='min_ratings', help="Only collect recipes with at least that many ratings. Defaults to 0")
+    parser.add_argument('--renew', '-R', dest='renew', action='store_true', help="If renew is `True`, the recipe id's are crawled from the web. When `False` it tries to read from a csv file. Defaults to True.")
+    parser.add_argument('--no-renew', '-!R', dest='renew', action='stroe_false')
+    parser.set_defaults(renew=True)
+    parser.add_argument('--categories', '--cat', '--cat_range', '-CR', default=[1, 200], type=int, nargs=2, dest='categories', help="The lower and upper bound of category ids to try out. Defaults to 1-200.")
+
+    config = parser.config
+    threads = parser.threads
+    min_stars = parser.min_stars
+    min_ratings = parser.min_ratings
+    renew = parser.renew
+    cat = parser.categories
+    categories = range(cat[0], cat[1])
+
+    run(config=config,
+        threads=threads,
+        min_stars=min_stars,
+        min_ratings=min_ratings,
+        renew=renew,
+        categories=categories
+        )

@@ -1,7 +1,5 @@
 *test.py
 storage/
 log*
-src/summary
-src/weights
 .ipynb_checkpoints/
 __pycache__
