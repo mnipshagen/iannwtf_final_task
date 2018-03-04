@@ -77,7 +77,6 @@
             function show_new(doc){
                 active_doc = doc;
                 let data = doc.data();
-                console.log(data);
                 list.empty();
                 data.ingredients.forEach(function (ing) {
                     if (ing != "NO_INGREDIENT"){
@@ -90,14 +89,20 @@
             function chosen(str){
                 let action = (str == 'yes');
                 if (active_doc != null){
-                    let data = active_doc.data;
+                    let data = active_doc.data();
                     let update = {};
                     if (data.real != action){
-                        update['incorrect'] = parseInt(data.incorrect) + 1;
+                        let incorrect = parseInt(data.incorrect) + 1;
+                        update = {"incorrect": incorrect};
                     } else {
-                        update['correct'] = parseInt(data.correct) + 1;
+                        let correct = parseInt(data.correct) + 1;
+                        update = {"correct": correct};
                     }
-                    recipes.doc(active_doc.id).update(update);
+                    console.log(update);
+                    console.log(active_doc.id);
+                    let docRef = recipes.doc(active_doc.id);
+                    console.log(docRef);
+                    docRef.update(update);
                 }
                 new_one();
             }
