@@ -1,0 +1,139 @@
+<!doctype html>
+<html class="no-js" lang="en" dir="ltr">
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Foundation for Sites</title>
+        <link rel="stylesheet" href="css/foundation.css">
+        <link rel="stylesheet" href="css/app.css">
+    </head>
+
+    <body>
+        <div class="grid-container">
+            
+            <div class="grid-x grid-padding-x">
+                <div class="large-12 cell">
+                    <h1>Is this a human made recipe?</h1>
+                </div>
+            </div>
+    
+            <div class="grid-x grid-padding-x">
+                <div class="large-4 medium-4 cell">
+                    <input type="button" value="Jawohl!" class="success button" onclick="chosen('yes');" />
+                </div>
+                <div class="large-4 medium-4 cell">
+                    <ul id="ingredientlist">
+                    </ul>
+                </div>
+                <div class="large-4 medium-4 cell">
+                    <input type="button" value="Nein!" class="alert button" onclick="chosen('no');" />
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Initialise Firebase connection -->
+        <script src="https://www.gstatic.com/firebasejs/4.9.0/firebase.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/4.9.1/firebase-firestore.js"></script>
+        <script>
+            // Initialize Firebase
+            var config = {
+                apiKey: "AIzaSyBH8U4Muui1-pZIirv1UbxLmA8muJzPjEY",
+                authDomain: "ainnwtf.firebaseapp.com",
+                databaseURL: "https://ainnwtf.firebaseio.com",
+                projectId: "ainnwtf",
+                storageBucket: "ainnwtf.appspot.com",
+                messagingSenderId: "770019981294"
+            };
+            firebase.initializeApp(config);
+        </script>
+
+        <!-- Foundations scripts? -->
+        <script src="js/vendor/jquery.js"></script>
+        <!-- <script src="js/vendor/what-input.js"></script> -->
+        <script src="js/vendor/foundation.min.js"></script>
+        <script src="js/app.js"></script>
+        <!-- That bad shit I wrote out -->
+        <script>
+            // const firebase = require("firebase");
+            // Required for side-effects
+            // require("firebase/firestore");
+
+            const db = firebase.firestore();
+            const recipes = db.collection("recipes");
+
+            let active_doc = null;
+            const list = $('#ingredientlist');
+
+            function failed(){
+                active_doc = null;
+                list.empty();
+                list.append($( '<li>', {
+                    text: "Something went wrong. Sorry for that. Press any of the two buttons to try again."
+                }));
+            }
+            function show_new(doc){
+                active_doc = doc;
+                let data = doc.data();
+                console.log(data);
+                list.empty();
+                data.ingredients.forEach(function (ing) {
+                    if (ing != "NO_INGREDIENT"){
+                        list.append($('<li>', {
+                            text: ing
+                        }));
+                    }
+                });
+            }
+            function chosen(str){
+                let action = (str == 'yes');
+                if (active_doc != null){
+                    let data = active_doc.data;
+                    let update = {};
+                    if (data.real != action){
+                        update['incorrect'] = parseInt(data.incorrect) + 1;
+                    } else {
+                        update['correct'] = parseInt(data.correct) + 1;
+                    }
+                    recipes.doc(active_doc.id).update(update);
+                }
+                new_one();
+            }
+            function new_one(){
+                rnd = parseInt((Math.random() * 250000), 10)
+                recipes.where("random", ">", rnd).orderBy("random").limit(1)
+                .get()
+                .then(function (snapshot) {
+                    if (snapshot.empty) {
+                        recipes.where("random", "<=", rnd).orderBy.orderBy("random", "desc").limit(1)
+                        .get()
+                        .then(function (snap) {
+                            if (snap.empty){
+                                failed();
+                            } else {
+                                doc = snap.docs[0];
+                                show_new(doc);
+                            }
+                        })
+                        .catch(function (error) {
+                            console.log("oops. " + error);
+                            failed();
+                        })
+                    } else {
+                        doc = snapshot.docs[0];
+                        show_new(doc);
+                    }
+                })
+                .catch(function (error) {
+                    console.log("oops. " + error);
+                    failed();
+                })
+            }
+
+            window.onload = new_one();
+            
+        </script>
+    
+    </html>
