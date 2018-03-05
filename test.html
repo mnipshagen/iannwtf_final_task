@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="no-js" lang="en" dir="ltr">
+<html lang="en" dir="ltr">
 
     <head>
         <meta charset="utf-8">
@@ -14,22 +14,36 @@
         <div class="grid-container">
             
             <div class="grid-x grid-padding-x">
-                <div class="large-12 cell">
+                <div class="large-9 cell">
                     <h1>Wurde das Rezept von einem Menschen zusammengestellt?</h1>
                 </div>
             </div>
     
             <div class="grid-x grid-padding-x">
-                <div class="large-4 medium-4 cell">
-                    <input type="button" value="Jawohl!" class="success button" onclick="chosen('yes');" />
+                <div class="large-3 medium-3 cell">
+                    <div style="margin: 0 auto;">
+                        <h3>Klick mich!</h3>
+                        <div style="height: 20%;">
+                            <input type="button" value="Jawohl!" class="success button" onclick="chosen('yes');" style="width: 50%;" />    
+                        </div>
+                        <div style="height: 20%;">
+                            <input type="button" value="Nein!" class="alert button" onclick="chosen('no');" style="width: 50%;" />
+                        </div>
+                    </div>
                 </div>
-                <div class="large-4 medium-4 cell">
+                <div class="large-3 medium-3 cell">
                     <h3>Zutaten</h3>
                     <ul id="ingredientlist">
                     </ul>
                 </div>
-                <div class="large-4 medium-4 cell">
-                    <input type="button" value="Nein!" class="alert button" onclick="chosen('no');" />
+                <div class="large-3 medium-3 cell">
+                    <h3>Auswertung</h3>
+                    Alle 4 Rezepte aktualisiert sich die Auswertung um zu vermeiden, dass du weißt welches der Rezepte du richtig oder falsch ausgewählt hast.
+                    <hr>
+                    <div>
+                        Rezepte ausgewertet: <b><span id="recipe_count" style="text-align: right;">0</span></b><br>
+                        Davon korrekt : <b><span id="recipe_count_correct" style="text-align: right;">0</span></b>
+                    </div>
                 </div>
             </div>
         </div>
@@ -67,6 +81,8 @@
 
             let active_doc = null;
             const list = $('#ingredientlist');
+            let count = 0;
+            let count_correct = 0;
 
             function failed(){
                 active_doc = null;
@@ -98,11 +114,14 @@
                     } else {
                         let correct = parseInt(data.correct) + 1;
                         update = {"correct": correct};
+                        count_correct += 1;
                     }
-                    console.log(update);
-                    console.log(active_doc.id);
+                    count += 1;
+                    if (count % 4 == 0){
+                        $( '#recipe_count' ).text(count);
+                        $( '#recipe_count_correct' ).text(count_correct);
+                    }
                     let docRef = recipes.doc(active_doc.id);
-                    console.log(docRef);
                     docRef.update(update);
                 }
                 new_one();
