@@ -40,6 +40,9 @@
                     <h3>Auswertung</h3>
                     Alle 8 Rezepte aktualisiert sich die Auswertung um zu vermeiden, dass du weißt welches der Rezepte du richtig oder falsch ausgewählt hast.
                     <hr>
+                    <div id="loading">
+                        <span style="color:crimson;" >&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span>
+                    </div>
                     <div>
                         Rezepte ausgewertet: <b><span id="recipe_count" style="text-align: right;">0</span></b><br>
                         Davon korrekt : <b><span id="recipe_count_correct" style="text-align: right;">0</span></b>
@@ -118,7 +121,27 @@
                         count_correct += 1;
                     }
                     count += 1;
-                    if (count % 8 == 0){
+                    let mod = count % 8;
+                    let s_green = "";
+                    let s_red = "";
+                    for (let i=0; i < 8; i += 1){
+                        if (i < mod){
+                            s_green += "█";
+                        } else {
+                            s_red += "█";
+                        }
+                    }
+                    let bar = $( '#loading' );
+                    bar.empty();
+                    bar.append($( '<span>', {
+                        text : s_green,
+                        style: "color:green;"
+                    }));
+                    bar.append($( '<span>', {
+                        text: s_red,
+                        style: "color:crimson;"
+                    }));
+                    if (mod == 0){
                         $( '#recipe_count' ).text(count);
                         $( '#recipe_count_correct' ).text(count_correct);
                     }
