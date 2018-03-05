@@ -38,7 +38,7 @@
                 </div>
                 <div class="large-3 medium-3 cell">
                     <h3>Auswertung</h3>
-                    Alle 4 Rezepte aktualisiert sich die Auswertung um zu vermeiden, dass du weißt welches der Rezepte du richtig oder falsch ausgewählt hast.
+                    Alle 8 Rezepte aktualisiert sich die Auswertung um zu vermeiden, dass du weißt welches der Rezepte du richtig oder falsch ausgewählt hast.
                     <hr>
                     <div>
                         Rezepte ausgewertet: <b><span id="recipe_count" style="text-align: right;">0</span></b><br>
@@ -117,7 +117,7 @@
                         count_correct += 1;
                     }
                     count += 1;
-                    if (count % 4 == 0){
+                    if (count % 8 == 0){
                         $( '#recipe_count' ).text(count);
                         $( '#recipe_count_correct' ).text(count_correct);
                     }
