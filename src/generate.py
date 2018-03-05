@@ -1,4 +1,4 @@
-import json
+import json, os
 import tensorflow as tf
 import numpy as np
 from random import shuffle
@@ -220,3 +220,13 @@ def to_db(objects):
             newRef = coll.document()
             batch.set(newRef, doc)
         batch.commit()
+
+def mirror(filename="./bckp/mirror.json"):
+    queryRef = coll.get()
+    objects = []
+    for doc in queryRef:
+        obj = doc.to_dict()
+        obj['id'] = doc.id
+        objects.append(obj)
+    
+    open(filename, "w+", encoding="utf-8").write(json.dumps(objects, ensure_ascii=False))

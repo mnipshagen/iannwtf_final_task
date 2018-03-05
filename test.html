@@ -95,7 +95,8 @@
                 active_doc = doc;
                 let data = doc.data();
                 list.empty();
-                data.ingredients.forEach(function (ing) {
+                let ingredient_set = new Set(data.ingredients)
+                ingredient_set.forEach(function (ing) {
                     if (ing != "NO_INGREDIENT"){
                         list.append($('<li>', {
                             text: ing
