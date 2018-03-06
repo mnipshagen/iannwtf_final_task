@@ -11,8 +11,9 @@ from recipes import Recipes
 
 
 class Embed():
-
+    """This class' purpose is to create a pre-trained embedding"""
     def __init__(self, config="config.json"):
+        """Load files and setup recipe helper"""
         recipes = Recipes()
         self.recipes = recipes
         vocab_size = 20000
@@ -25,34 +26,40 @@ class Embed():
             settings = json.load(cfg)["network"]
         self.settings = settings
 
+        # these were the control id's
         ing_ids = recipes.ings2ids(['kartoffel(n)','knoblauch','schokolade','nudeln'])
         
         self.dfg(ing_ids)
 
     def dfg(self, ing_ids):
+        """Create the graph!"""
         settings = self.settings
 
+        # load and set hyperparameters
         hyperparams = settings["hyperparameters"]
 
         embedding_size = hyperparams["embedding_size"]
-        max_ingredients = hyperparams["max_ingredients"]
         noise_samples = 64
         ing_size = self.ing_size
 
-
+        # just in case
         tf.reset_default_graph()
 
+        # each input is a batch of ingredient ids and a batch of context's
+        # the learning rate is a placeholder to be changeable by parameter
         with vs("input"):
             input_ings = tf.placeholder(dtype=tf.int32, shape=[None], name="ingredients")
             input_recipes = tf.placeholder(dtype=tf.int64, shape=[None,1], name="recipes")
             learningrate = tf.placeholder(dtype=tf.float32, shape=[], name="learning_rate")
         
+        # setup the embedding and create the lookup tensor
         with vs("embeddings"):
             init = tf.random_uniform_initializer(-1.0, 1.0)
             ing_embedding_w = tf.get_variable("ing_embedding", [ing_size, embedding_size], initializer=init)
 
             ing_embedding = tf.nn.embedding_lookup(ing_embedding_w, input_ings)
 
+        # We use nce loss with pretty much the same setup as in class / tensorflow tutorial
         with vs("output_and_loss"):
             init = tf.truncated_normal_initializer(stddev=1.0 / np.sqrt(embedding_size))
             context_w = tf.get_variable("context_weight", [ing_size, embedding_size], initializer=init)
@@ -69,6 +76,7 @@ class Embed():
 
             tf.summary.scalar("nce_loss", loss)
 
+        # Simple gradient descent algorithm and minimise nce loss
         with vs("lets_backpropagate"):
             global_step = tf.get_variable("global_step", [], dtype=tf.int32, initializer=tf.zeros_initializer(), trainable=False)
             optimizer = tf.train.GradientDescentOptimizer(learningrate)
@@ -77,6 +85,7 @@ class Embed():
         validate = self.nearest_neighbours(context_w, ing_ids)
         summaries = tf.summary.merge_all()
 
+        # need to reference those from the training function
         self.input_ings = input_ings
         self.input_recipes = input_recipes
         self.input_lr = learningrate
@@ -91,17 +100,20 @@ class Embed():
               epochs=2,
               learning_rate=1
               ):
+              """Train the network with given batch_size and learning rate for given epochs"""
         settings = self.settings
         directories = settings["directories"]
 
-        max_ingredients = settings['hyperparameters']["max_ingredients"]
+        max_ingredients = self.ing_size
         embedding_weights = directories["embedding_weights"]
         
         train_writer = tf.summary.FileWriter("./embed_summaries/train", tf.get_default_graph())
+        # in the actual graph, we will only need the embedding matrix.
         saver = tf.train.Saver(
             var_list={'ingredient_embedding': self.context}) 
 
         with tf.Session() as session:
+            # load last weights if possible
             ckpt = tf.train.latest_checkpoint(embedding_weights)
             if ckpt != None:
                 saver.restore(session, ckpt)
@@ -143,6 +155,15 @@ class Embed():
         train_writer.close()
 
     def get_ingredient_and_context(self, recipes):
+        """
+        From a list of recipes, build tuples of ingredients.
+        
+        For each ingredient there will be a tuple with each other ingredient from the recipe.
+        So if the recipe is [12, 37, 843] there will be tuples: (12, 37), (12, 843) and (37, 843)
+
+        The tuples are then shuffled and returned are two lists: a list of ingredient id's and a list of contexts,
+        corresponding to each other.
+        """
         pairs = []
         for recipe in recipes:
             recipe = recipe[np.where(recipe!=0)]
@@ -159,6 +180,7 @@ class Embed():
 
 
     def nearest_neighbours(self, embeddings, words, k=5):
+        """get the `k` nearest neighbours to each word in words"""
         k += 1
 
         normed_embedding = tf.nn.l2_normalize(embeddings, axis=1)
@@ -177,10 +199,10 @@ class Embed():
         return sorted_cosine_similarity
 
     def info(self):
+        """Debugging function to check for shape consistency"""
         settings = self.settings
         directories = settings["directories"]
 
-        max_ingredients = settings['hyperparameters']["max_ingredients"]
         embedding_weights = directories["embedding_weights"]
         saver = tf.train.Saver(
             var_list={'ingredient_embedding': self.context})
@@ -192,6 +214,7 @@ class Embed():
             print(context.shape)
 
 if __name__ == '__main__':
+    """Make this script easily runnable from commandline by handling cli arguments and then start training."""
     parser = argparse.ArgumentParser(description="Pretrain an embedding for later use")
     parser.add_argument('--batch_size','--bs','-B', default=128, type=int, dest='batch_size', help="The batch size to use while training")
     parser.add_argument('--epochs', "-E", default=2, type=int, dest='epochs', help="Amount of epochs to train the network")

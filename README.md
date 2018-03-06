@@ -8,16 +8,14 @@ The code was developed and tested with
 * python 3.6
 * tensorflow 1.5 & 1.3
 * MongoDB 3.6
+* Firebase 03/2018
 
-## Install & Use
+## An overview
 * MongoDB
     * Download & install [MongoDB](https://docs.mongodb.com/manual/installation/)
     * The application expects a local server running at `mongodb://localhost:27017`
     * The server either needs to host a database named `iannwtf` and a collection `recipes` or the `build_db.py` (see below) script can crawl and build the database from scratch. This takes a while.
-    * A backup of the database can be downloaded from [Mo's Onedrive](https://1drv.ms/f/s!Am3LtCW8Ozvuh7J19osxy3B-qIucfQ) and restored with the `mongorestore` application bundled with the MongoDB server installation. The syntax is `mongorestore -d iannwtf <directory_backup>`. Also refer to [the documentation](https://docs.mongodb.com/manual/reference/program/mongorestore/).
+    * A backup of the database can be downloaded from [here](https://1drv.ms/f/s!AvTNk9gMBgjaegEexxiqTOTx1gs) and restored with the `mongorestore` application bundled with the MongoDB server installation. The syntax is `mongorestore -d iannwtf <directory_backup>` or `mongorestore ./` if the iannwtf folder is in the working directory. Also refer to [the documentation](https://docs.mongodb.com/manual/reference/program/mongorestore/).
 * The Jupyter-Notebook file holds the actual network code.
-
-## What this is
-
-### Data collection and pre-processing
-The `build_db.py` is the crawler script to fetch the data from the chefkoch api. It expects a local hosted mongo_db database running at port 27017 with a db named `iannwtf`. It will create a collection named `recipes` and remove it if it already exists.
+* The backup is already processed, but if the database is created from scratch, the `remap_food_ids` function from the `process.py` script must be called beforehand.
+* 

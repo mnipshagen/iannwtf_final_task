@@ -1,11 +1,11 @@
 # %%
-import os, pymongo, json
+import os, pymongo, json, queue
 from bson import json_util
 
 # %%
 
 config = "config.json"
-
+# load the database config
 with open(config) as conf:
     data = json.load(conf)
     storage = data['storage']
@@ -20,6 +20,7 @@ coll = db[RECIPE_COLLECTION]
 
 # %%
 def extract_text():
+    """Extracts text from text fields of the recipes and puts them all into a file for further processing."""
     count = 0
     q = queue.Queue()
     try:
@@ -41,6 +42,7 @@ def extract_text():
                 f.write(" ")
 
 def create_mapping():
+    """creates a mapping from foodids into the interval [1, #ingredients]"""
     agg = coll.aggregate([
         {"$project": {"_id": 0, "ingredients.foodId": 1}},
         {"$unwind": "$ingredients"},
@@ -57,6 +59,7 @@ def create_mapping():
     return {_id: (i+1) for i, _id in enumerate(ids)}
 
 def remap_food_ids():
+    """remaps the foodids in the database into the interval [1, #ingredients]"""
     remap = create_mapping()
     # why use .update() when you can update yourself? fml
     for doc in coll.find():
